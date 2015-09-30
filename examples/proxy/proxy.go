@@ -92,7 +92,7 @@ func (h ldapHandler) Search(boundDN string, searchReq ldap.SearchRequest, conn n
 		return ldap.ServerSearchResult{}, err
 	}
 	//log.Printf("P: Search OK: %s -> num of entries = %d\n", search.Filter, len(sr.Entries))
-	return ldap.ServerSearchResult{sr.Entries, []string{}, []ldap.Control{}, ldap.LDAPResultSuccess}, nil
+	return ldap.ServerSearchResult{Entries: sr.Entries, Referrals: sr.Referrals, Controls: sr.Controls, ResultCode: ldap.LDAPResultSuccess}, nil
 }
 func (h ldapHandler) Close(s string, conn net.Conn) error {
 	conn.Close() // close connection to the server when then client is closed
