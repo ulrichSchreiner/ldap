@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/nmcclain/ldap"
+	"github.com/ulrichSchreiner/ldap"
 )
 
 type ldapHandler struct {
