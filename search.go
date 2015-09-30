@@ -318,7 +318,7 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 		}
 
 		switch packet.Children[1].Tag {
-		case 4:
+		case ApplicationSearchResultEntry:
 			entry := new(Entry)
 			entry.DN = packet.Children[1].Children[0].Value.(string)
 			for _, child := range packet.Children[1].Children[1].Children {
@@ -330,9 +330,9 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 				entry.Attributes = append(entry.Attributes, attr)
 			}
 			result.Entries = append(result.Entries, entry)
-		case 5:
+		case ApplicationSearchResultDone:
 			resultCode, resultDescription := getLDAPResultCode(packet)
-			if resultCode != 0 {
+			if resultCode != 0 && resultCode != LDAPResultSizeLimitExceeded {
 				return result, NewError(resultCode, errors.New(resultDescription))
 			}
 			if len(packet.Children) == 3 {
@@ -341,7 +341,7 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 				}
 			}
 			foundSearchResultDone = true
-		case 19:
+		case ApplicationSearchResultReference:
 			result.Referrals = append(result.Referrals, packet.Children[1].Children[0].Value.(string))
 		}
 	}

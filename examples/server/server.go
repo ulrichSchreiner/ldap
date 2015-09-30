@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/nmcclain/ldap"
 	"log"
 	"net"
+
+	"github.com/nmcclain/ldap"
 )
 
 /////////////
