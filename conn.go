@@ -10,7 +10,8 @@ import (
 	"log"
 	"net"
 	"sync"
-  "time"
+	"time"
+
 	"github.com/nmcclain/asn1-ber"
 )
 
@@ -57,19 +58,32 @@ func Dial(network, addr string) (*Conn, error) {
 // DialTimeout connects to the given address on the given network using net.DialTimeout
 // and then returns a new Conn for the connection. Acts like Dial but takes a timeout.
 func DialTimeout(network, addr string, timeout time.Duration) (*Conn, error) {
-  c, err := net.DialTimeout(network, addr, timeout)
-  if err != nil {
-    return nil, NewError(ErrorNetwork, err)
-  }
-  conn := NewConn(c)
-  conn.start()
-  return conn, nil
+	c, err := net.DialTimeout(network, addr, timeout)
+	if err != nil {
+		return nil, NewError(ErrorNetwork, err)
+	}
+	conn := NewConn(c)
+	conn.start()
+	return conn, nil
 }
 
 // DialTLS connects to the given address on the given network using tls.Dial
 // and then returns a new Conn for the connection.
 func DialTLS(network, addr string, config *tls.Config) (*Conn, error) {
 	c, err := tls.Dial(network, addr, config)
+	if err != nil {
+		return nil, NewError(ErrorNetwork, err)
+	}
+	conn := NewConn(c)
+	conn.isTLS = true
+	conn.start()
+	return conn, nil
+}
+
+// DialTLSDialer connects to the given address on the given network using tls.DialWithDialer
+// and then returns a new Conn for the connection.
+func DialTLSDialer(network, addr string, config *tls.Config, dialer *net.Dialer) (*Conn, error) {
+	c, err := tls.DialWithDialer(dialer, network, addr, config)
 	if err != nil {
 		return nil, NewError(ErrorNetwork, err)
 	}
@@ -291,36 +305,36 @@ func (l *Conn) reader() {
 
 	}
 }
+
 // Use Abandon operation to perform connection keepalives
 func (l *Conn) Ping() error {
 
-  messageID := l.nextMessageID()
+	messageID := l.nextMessageID()
 
-  packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
-  packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
-  abandonRequest := ber.Encode(ber.ClassApplication, ber.TypePrimitive, ApplicationAbandonRequest, nil, "Abandon Request")
-  packet.AppendChild(abandonRequest)
+	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
+	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
+	abandonRequest := ber.Encode(ber.ClassApplication, ber.TypePrimitive, ApplicationAbandonRequest, nil, "Abandon Request")
+	packet.AppendChild(abandonRequest)
 
-  if l.Debug {
-    ber.PrintPacket(packet)
-  }
+	if l.Debug {
+		ber.PrintPacket(packet)
+	}
 
-  channel, err := l.sendMessage(packet)
-  if err != nil {
-    return err
-  }
-  if channel == nil {
-    return NewError(ErrorNetwork, errors.New("ldap: could not send message"))
-  }
-  defer l.finishMessage(messageID)
+	channel, err := l.sendMessage(packet)
+	if err != nil {
+		return err
+	}
+	if channel == nil {
+		return NewError(ErrorNetwork, errors.New("ldap: could not send message"))
+	}
+	defer l.finishMessage(messageID)
 
-  if l.Debug {
-    if err := addLDAPDescriptions(packet); err != nil {
-      return err
-    }
-    ber.PrintPacket(packet)
-  }
+	if l.Debug {
+		if err := addLDAPDescriptions(packet); err != nil {
+			return err
+		}
+		ber.PrintPacket(packet)
+	}
 
-  return nil
+	return nil
 }
-
